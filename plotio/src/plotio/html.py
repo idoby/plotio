@@ -31,5 +31,6 @@ def clean_html_label(label: str) -> str:
 
     parser = _LabelHTMLParser()
     parser.feed(label)
-    text = ''.join(parser.text_parts)
-    return text.strip()
+    text = ''.join(parser.text_parts).strip()
+
+    return text

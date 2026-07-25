@@ -14,22 +14,6 @@ class CellData(TypedDict):
     metadata: dict[str, str]
 
 
-def _parse_style_string(style_str: str) -> dict[str, StyleValue]:
-    """Parse a Draw.io style string into a dictionary."""
-    style_dict: dict[str, StyleValue] = {}
-    for p in style_str.split(';'):
-        if '=' in p:
-            k, v = p.split('=', 1)
-            k = k.strip().lower()
-            v = v.strip()
-            if k not in ['fontfamily', 'fontcolor', 'labelbackgroundcolor', 'fillcolor', 'strokecolor']:
-                v = v.lower()
-            style_dict[k] = v
-        elif p:
-            style_dict[p.strip().lower()] = ''
-    return style_dict
-
-
 def parse_root_cell(root_cell: ET.Element, scale: float) -> tuple[dict[str, DrawIONode], list[DrawIOEdge]]:
     """Parse the root cell element of the XML.
 
@@ -107,6 +91,22 @@ def parse_root_cell(root_cell: ET.Element, scale: float) -> tuple[dict[str, Draw
                 edges.append(edge)
 
     return nodes, edges
+
+
+def _parse_style_string(style_str: str) -> dict[str, StyleValue]:
+    """Parse a Draw.io style string into a dictionary."""
+    style_dict: dict[str, StyleValue] = {}
+    for p in style_str.split(';'):
+        if '=' in p:
+            k, v = p.split('=', 1)
+            k = k.strip().lower()
+            v = v.strip()
+            if k not in ['fontfamily', 'fontcolor', 'labelbackgroundcolor', 'fillcolor', 'strokecolor']:
+                v = v.lower()
+            style_dict[k] = v
+        elif p:
+            style_dict[p.strip().lower()] = ''
+    return style_dict
 
 
 def _parse_vertex(cid: str, cell: ET.Element, metadata: dict[str, str], scale: float) -> DrawIONode:
