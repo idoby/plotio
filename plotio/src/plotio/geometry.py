@@ -6,6 +6,7 @@ Math and geometry logic is preserved exactly as in the original drawio_render_ut
 import numpy as np
 
 from .core import BoundingBox, DrawIOEdge, DrawIONode, Point
+from .errors import RenderError
 
 
 def intersect_ray_with_geometry(start: Point, target: Point, node: DrawIONode) -> Point:
@@ -28,7 +29,7 @@ def intersect_ray_with_geometry(start: Point, target: Point, node: DrawIONode) -
     dy = target.y - start.y
 
     if dx == 0 and dy == 0:
-        raise ValueError(f'Ray intersection failed: start and target are the same point for node {node.id}')
+        raise RenderError(f'Ray intersection failed: start and target are the same point for node {node.id}')
 
     if node.shape == 'ellipse':
         # Ellipse intersection
@@ -110,7 +111,7 @@ def label_anchor(
                 case _:
                     x = bbox.x + bbox.w / 2 + (spacing_left - spacing_right) / 2
         case _:
-            raise ValueError(f'Unsupported label horizontal position: {position_x}')
+            raise RenderError(f'Unsupported label horizontal position: {position_x}')
 
     match position_y:
         case 'top':
@@ -126,7 +127,7 @@ def label_anchor(
                 case _:
                     y = bbox.y + bbox.h / 2 + (spacing_top - spacing_bottom) / 2
         case _:
-            raise ValueError(f'Unsupported label vertical position: {position_y}')
+            raise RenderError(f'Unsupported label vertical position: {position_y}')
 
     return Point(x, y)
 
@@ -238,6 +239,6 @@ def resolve_node_terminal(
 
             return intersect_ray_with_geometry(center, hint_pt, node)
         else:
-            raise ValueError('Cannot resolve terminal')
+            raise RenderError('Cannot resolve terminal')
     else:
-        raise ValueError('Invalid terminal definition')
+        raise RenderError('Invalid terminal definition')

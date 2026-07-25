@@ -5,10 +5,9 @@ import math
 import pytest
 
 from plotio.core import BoundingBox, DrawIOEdge, DrawIONode, Point
+from plotio.errors import RenderError
 from plotio.geometry import get_path_point_and_tangent, intersect_ray_with_geometry, label_anchor, resolve_node_terminal
 from plotio.styles import EdgeStyle, NodeStyle
-
-# --- Ray Intersection Tests ---
 
 
 def test_intersect_ray_ellipse() -> None:
@@ -51,11 +50,8 @@ def test_intersect_ray_same_point() -> None:
     node = DrawIONode('1', BoundingBox(0, 0, 100, 100), 'rectangle', '', NodeStyle())
     start = Point(50, 50)
     target = Point(50, 50)
-    with pytest.raises(ValueError, match='Ray intersection failed'):
+    with pytest.raises(RenderError, match='Ray intersection failed'):
         intersect_ray_with_geometry(start, target, node)
-
-
-# --- Resolve Node Terminal Tests ---
 
 
 def test_resolve_node_terminal_explicit_entry() -> None:
@@ -114,18 +110,15 @@ def test_resolve_node_terminal_implicit_straight_routing() -> None:
 def test_resolve_node_terminal_missing_hint_error() -> None:
     node = DrawIONode('1', BoundingBox(0, 0, 100, 100), 'rectangle', '', NodeStyle())
     edge = DrawIOEdge('e1', '1', '2', [], style=EdgeStyle())
-    with pytest.raises(ValueError, match='Cannot resolve terminal'):
+    with pytest.raises(RenderError, match='Cannot resolve terminal'):
         resolve_node_terminal(node, edge, is_source=True, hint_pt=None)
 
 
 def test_resolve_node_terminal_invalid_explicit_error() -> None:
     node = DrawIONode('1', BoundingBox(0, 0, 100, 100), 'rectangle', '', NodeStyle())
     edge = DrawIOEdge('e1', '1', '2', [], style=EdgeStyle({'entryx': '1'}))
-    with pytest.raises(ValueError, match='Invalid terminal definition'):
+    with pytest.raises(RenderError, match='Invalid terminal definition'):
         resolve_node_terminal(node, edge, is_source=False, hint_pt=None)
-
-
-# --- Label Anchor Tests ---
 
 
 def test_label_anchor_center_middle() -> None:
@@ -165,17 +158,14 @@ def test_label_anchor_right_bottom() -> None:
 
 def test_label_anchor_unsupported_horizontal() -> None:
     bbox = BoundingBox(10, 10, 100, 100)
-    with pytest.raises(ValueError, match='Unsupported label horizontal position'):
+    with pytest.raises(RenderError, match='Unsupported label horizontal position'):
         label_anchor(bbox, 'invalid', 'middle', 'center', 'middle', 0, 0, 0, 0, 0)
 
 
 def test_label_anchor_unsupported_vertical() -> None:
     bbox = BoundingBox(10, 10, 100, 100)
-    with pytest.raises(ValueError, match='Unsupported label vertical position'):
+    with pytest.raises(RenderError, match='Unsupported label vertical position'):
         label_anchor(bbox, 'center', 'invalid', 'center', 'middle', 0, 0, 0, 0, 0)
-
-
-# --- Path Point & Tangent Tests ---
 
 
 def test_get_path_point_and_tangent_empty() -> None:

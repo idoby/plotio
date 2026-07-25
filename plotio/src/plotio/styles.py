@@ -12,7 +12,7 @@ class DrawioStyle:
     raw_styles: dict[str, StyleValue] = field(default_factory=dict)
 
     def as_mpl_kwargs(self) -> dict[str, StyleValue]:
-        """Convert styles to Matplotlib kwargs."""
+        """Convert styles to Matplotlib kwargs for patches and lines."""
         kwargs = {}
         # Only preserve safe matplotlib keys
         safe_keys = {'linewidth', 'linestyle', 'edgecolor', 'facecolor', 'alpha', 'color'}
@@ -20,6 +20,36 @@ class DrawioStyle:
             if k in safe_keys:
                 kwargs[k] = v
         return kwargs
+
+    def as_mpl_text_kwargs(self) -> dict[str, StyleValue]:
+        """Convert styles to Matplotlib kwargs for text."""
+        kwargs = {}
+        # Only preserve safe matplotlib text keys
+        safe_keys = {
+            'fontsize',
+            'fontfamily',
+            'color',
+            'backgroundcolor',
+            'horizontalalignment',
+            'verticalalignment',
+            'zorder',
+        }
+        for k, v in self.raw_styles.items():
+            if k in safe_keys:
+                kwargs[k] = v
+        return kwargs
+
+    def parse_font_styles(self) -> None:
+        """Parse raw font styles into typed properties."""
+        if 'fontsize' in self.raw_styles:
+            try:
+                self.raw_styles['fontsize'] = float(self.raw_styles['fontsize'])
+            except ValueError:
+                pass
+
+        if 'fontcolor' in self.raw_styles:
+            val = self.raw_styles['fontcolor']
+            self.raw_styles['color'] = 'black' if val == 'default' else val
 
 
 @dataclass
@@ -42,6 +72,8 @@ class NodeStyle(DrawioStyle):
         if 'strokecolor' in self.raw_styles:
             val = self.raw_styles['strokecolor']
             self.raw_styles['edgecolor'] = 'black' if val == 'default' else val
+
+        self.parse_font_styles()
 
 
 @dataclass

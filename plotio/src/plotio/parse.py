@@ -136,7 +136,7 @@ def _parse_vertex(cid: str, cell: ET.Element, metadata: dict[str, str], scale: f
     geometry = BoundingBox(x * scale, y * scale, w * scale, h * scale)
 
     return DrawIONode(
-            id=cid, bounding_box=geometry, shape=shape, label=label, style=NodeStyle(style_dict), metadata=metadata
+        id=cid, bounding_box=geometry, shape=shape, label=label, style=NodeStyle(style_dict), metadata=metadata
     )
 
 
@@ -145,6 +145,8 @@ def _parse_edge_label(cid: str, cell: ET.Element, metadata: dict[str, str], scal
     if geo is None:
         raise ParseError(f'Edge label cell {cid} missing mxGeometry.')
 
+    # x is relative position (-1 to 1 usually, or 0 to 1)
+    # y is orthogonal offset
     x = float(geo.get('x', 0))
     y = float(geo.get('y', 0)) * scale
 
@@ -161,12 +163,12 @@ def _parse_edge_label(cid: str, cell: ET.Element, metadata: dict[str, str], scal
     label = clean_html_label(label)
 
     return DrawIOEdgeLabel(
-            id=cid, label=label, style=LabelStyle(style_dict), position=x, y_offset=y, offset=offset, metadata=metadata
+        id=cid, label=label, style=LabelStyle(style_dict), position=x, y_offset=y, offset=offset, metadata=metadata
     )
 
 
 def _parse_edge(
-        cid: str, cell: ET.Element, metadata: dict[str, str], scale: float, labels: list[DrawIOEdgeLabel] | None = None
+    cid: str, cell: ET.Element, metadata: dict[str, str], scale: float, labels: list[DrawIOEdgeLabel] | None = None
 ) -> DrawIOEdge:
     if labels is None:
         labels = []
@@ -199,13 +201,13 @@ def _parse_edge(
         fixed_target = Point(pt_x, pt_y)
 
     return DrawIOEdge(
-            id=cid,
-            source_id=source_id,
-            target_id=target_id,
-            waypoints=waypoints,
-            style=EdgeStyle(style_dict),
-            metadata=metadata,
-            fixed_source=fixed_source,
-            fixed_target=fixed_target,
-            labels=labels,
+        id=cid,
+        source_id=source_id,
+        target_id=target_id,
+        waypoints=waypoints,
+        style=EdgeStyle(style_dict),
+        metadata=metadata,
+        fixed_source=fixed_source,
+        fixed_target=fixed_target,
+        labels=labels,
     )

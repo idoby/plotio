@@ -1,6 +1,7 @@
 """Tests for the Draw.io XML parser logic."""
 
 import xml.etree.ElementTree as ET
+
 import pytest
 
 from plotio.errors import ParseError
@@ -114,21 +115,19 @@ def test_parse_root_cell_extracts_nodes_and_edges() -> None:
     assert edges[0].id == 'edge1'
     assert len(edges[0].labels) == 1
     assert edges[0].labels[0].id == 'label1'
-    assert edges[0].labels[0].label == "L"
+    assert edges[0].labels[0].label == 'L'
 
 
 def test_parse_root_cell_mxcell_no_id() -> None:
-    # Arrange
     xml_str = '<root><mxCell /></root>'
     root_cell = ET.fromstring(xml_str)
-    # Act / Assert
-    with pytest.raises(ParseError, match="mxCell without id"):
+
+    with pytest.raises(ParseError, match='mxCell without id'):
         parse_root_cell(root_cell, 1.0)
 
 
 def test_parse_root_cell_object_success() -> None:
-    # Arrange
-    xml_str = '''
+    xml_str = """
     <root>
         <object id="obj1" custom="123">
             <mxCell vertex="1" style="shape=ellipse">
@@ -136,45 +135,41 @@ def test_parse_root_cell_object_success() -> None:
             </mxCell>
         </object>
     </root>
-    '''
+    """
+
     root_cell = ET.fromstring(xml_str)
-    # Act
-    nodes, edges = parse_root_cell(root_cell, 1.0)
-    # Assert
-    assert "obj1" in nodes
-    assert nodes["obj1"].metadata["custom"] == "123"
+    nodes, _edges = parse_root_cell(root_cell, 1.0)
+
+    assert 'obj1' in nodes
+    assert nodes['obj1'].metadata['custom'] == '123'
 
 
 def test_parse_root_cell_object_no_mxcell() -> None:
-    # Arrange
     xml_str = '<root><object id="obj1"></object></root>'
     root_cell = ET.fromstring(xml_str)
-    # Act / Assert
-    with pytest.raises(ParseError, match="object without mxCell"):
+
+    with pytest.raises(ParseError, match='object without mxCell'):
         parse_root_cell(root_cell, 1.0)
 
 
 def test_parse_root_cell_object_no_id() -> None:
-    # Arrange
     xml_str = '<root><object><mxCell /></object></root>'
     root_cell = ET.fromstring(xml_str)
-    # Act / Assert
-    with pytest.raises(ParseError, match="object without id"):
+
+    with pytest.raises(ParseError, match='object without id'):
         parse_root_cell(root_cell, 1.0)
 
 
 def test_parse_root_cell_unexpected_element() -> None:
-    # Arrange
     xml_str = '<root><random /></root>'
     root_cell = ET.fromstring(xml_str)
-    # Act / Assert
-    with pytest.raises(ParseError, match="Unexpected element in root cell: random"):
+
+    with pytest.raises(ParseError, match='Unexpected element in root cell: random'):
         parse_root_cell(root_cell, 1.0)
 
 
 def test_parse_edge_label_no_equals_in_style() -> None:
-    # Arrange
-    xml_str = '''
+    xml_str = """
     <root>
         <mxCell id="1" />
         <mxCell id="edge1" edge="1" source="1" parent="1" style="dashed">
@@ -184,18 +179,17 @@ def test_parse_edge_label_no_equals_in_style() -> None:
             <mxGeometry x="0" y="0" relative="1" as="geometry" />
         </mxCell>
     </root>
-    '''
+    """
+
     root_cell = ET.fromstring(xml_str)
-    # Act
-    nodes, edges = parse_root_cell(root_cell, 1.0)
-    # Assert
+    _, edges = parse_root_cell(root_cell, 1.0)
+
     assert len(edges) == 1
     assert len(edges[0].labels) == 1
 
 
 def test_parse_vertex_various_shapes_and_styles() -> None:
-    # Arrange
-    xml_str = '''
+    xml_str = """
     <root>
         <mxCell id="n1" vertex="1" style="rounded=1">
             <mxGeometry as="geometry" />
@@ -210,46 +204,42 @@ def test_parse_vertex_various_shapes_and_styles() -> None:
             <mxGeometry as="geometry" />
         </mxCell>
     </root>
-    '''
+    """
     root_cell = ET.fromstring(xml_str)
-    # Act
-    nodes, edges = parse_root_cell(root_cell, 1.0)
-    # Assert
-    assert nodes["n1"].shape == "rounded_rectangle"
-    assert nodes["n2"].shape == "step"
-    assert "dashed" in nodes["n2"].style.raw_styles
-    assert nodes["n3"].shape is None
-    assert nodes["n4"].shape == "ellipse"
+    nodes, _edges = parse_root_cell(root_cell, 1.0)
+
+    assert nodes['n1'].shape == 'rounded_rectangle'
+    assert nodes['n2'].shape == 'step'
+    assert 'dashed' in nodes['n2'].style.raw_styles
+    assert nodes['n3'].shape is None
+    assert nodes['n4'].shape == 'ellipse'
 
 
 def test_parse_vertex_unsupported_shape() -> None:
-    # Arrange
-    xml_str = '''
+    xml_str = """
     <root>
         <mxCell id="n1" vertex="1" style="unknown=1">
             <mxGeometry as="geometry" />
         </mxCell>
     </root>
-    '''
+    """
+
     root_cell = ET.fromstring(xml_str)
-    # Act / Assert
-    with pytest.raises(ParseError, match="Unsupported or missing shape"):
+    with pytest.raises(ParseError, match='Unsupported or missing shape'):
         parse_root_cell(root_cell, 1.0)
 
 
 def test_parse_edge_label_missing_geometry() -> None:
-    # Arrange
     xml_str = '<mxCell id="1" style="edgeLabel" />'
     cell = ET.fromstring(xml_str)
-    # Act / Assert
-    with pytest.raises(ParseError, match="Edge label cell 1 missing mxGeometry"):
-        _parse_edge_label("1", cell, {}, 1.0)
+
+    with pytest.raises(ParseError, match='Edge label cell 1 missing mxGeometry'):
+        _parse_edge_label('1', cell, {}, 1.0)
 
 
 def test_parse_edge_missing_geometry() -> None:
-    # Arrange
     xml_str = '<mxCell id="1" edge="1" />'
     cell = ET.fromstring(xml_str)
-    # Act / Assert
-    with pytest.raises(ParseError, match="Edge cell 1 missing mxGeometry"):
-        _parse_edge("1", cell, {}, 1.0)
+
+    with pytest.raises(ParseError, match='Edge cell 1 missing mxGeometry'):
+        _parse_edge('1', cell, {}, 1.0)

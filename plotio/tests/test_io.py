@@ -52,16 +52,14 @@ def test_parse_drawio_xml_success(tmp_path: Path) -> None:
 
 
 def test_parse_drawio_xml_invalid_xml_no_root_cell(tmp_path: Path) -> None:
-    # Arrange
     xml_content = """<mxfile>
       <diagram id="test">
         <mxGraphModel>
         </mxGraphModel>
       </diagram>
     </mxfile>"""
-    test_file = tmp_path / "test_no_root.xml"
+    test_file = tmp_path / 'test_no_root.xml'
     test_file.write_text(xml_content)
 
-    # Act / Assert
-    with pytest.raises(ParseError, match="Invalid Draw.io XML: No root cell found"):
+    with pytest.raises(ParseError, match='Invalid Draw.io XML: No root cell found'):
         parse_drawio_xml(test_file)
