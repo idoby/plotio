@@ -15,31 +15,39 @@ class Point:
     y: float
 
     def __add__(self, other: 'Point') -> 'Point':
+        """Add two points."""
         return Point(self.x + other.x, self.y + other.y)
 
     def __sub__(self, other: 'Point') -> 'Point':
+        """Subtract one point from another."""
         return Point(self.x - other.x, self.y - other.y)
 
     def __mul__(self, scalar: float) -> 'Point':
+        """Multiply a point by a scalar."""
         return Point(self.x * scalar, self.y * scalar)
 
     def __truediv__(self, scalar: float) -> 'Point':
+        """Divide a point by a scalar."""
         return Point(self.x / scalar, self.y / scalar)
 
     def __abs__(self) -> 'Point':
+        """Get the absolute value of the point's coordinates."""
         return Point(abs(self.x), abs(self.y))
 
     def norm(self) -> float:
-        return np.sqrt(self.x**2 + self.y**2).item()
+        """Calculate the Euclidean norm of the point."""
+        return float(np.sqrt(self.x**2 + self.y**2).item())
 
     def unit(self) -> 'Point':
+        """Get a unit vector pointing in the same direction."""
         n = self.norm()
         if n == 0:
             return Point(0.0, 0.0)
         return self / n
 
-    def __array__(self) -> np.ndarray:
-        return np.array([self.x, self.y])
+    def __array__(self, dtype: type | np.dtype | None = None, copy: bool | None = None) -> np.ndarray:
+        """Convert the point to a numpy array."""
+        return np.array([self.x, self.y], dtype=dtype, copy=copy)
 
 
 @dataclass(frozen=True)
@@ -53,6 +61,7 @@ class BoundingBox:
 
     @property
     def center(self) -> Point:
+        """Get the center point of the bounding box."""
         return Point(self.x + self.w / 2, self.y + self.h / 2)
 
 

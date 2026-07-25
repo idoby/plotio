@@ -5,7 +5,8 @@ import argparse
 from .render import render_drawio
 
 
-def main():
+def main() -> None:
+    """Run the Plotio command line interface."""
     parser = argparse.ArgumentParser(description='Render Draw.io XML to Matplotlib graphics.')
     parser.add_argument('input', help='Input Draw.io file path')
     parser.add_argument('output', help='Output file path (e.g., .svg, .png)')

@@ -26,7 +26,8 @@ class DrawioStyle:
 class NodeStyle(DrawioStyle):
     """Style configuration for nodes."""
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
+        """Parse raw styles into typed properties after initialization."""
         # Perform JIT type coercion
         if 'strokewidth' in self.raw_styles:
             try:
@@ -47,7 +48,8 @@ class NodeStyle(DrawioStyle):
 class EdgeStyle(DrawioStyle):
     """Style configuration for edges."""
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
+        """Parse raw styles into typed properties after initialization."""
         if 'strokewidth' in self.raw_styles:
             try:
                 self.raw_styles['linewidth'] = float(self.raw_styles['strokewidth'])
@@ -66,7 +68,8 @@ class EdgeStyle(DrawioStyle):
 class LabelStyle(DrawioStyle):
     """Style configuration for labels."""
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
+        """Parse raw styles into typed properties after initialization."""
         if 'fontsize' in self.raw_styles:
             try:
                 self.raw_styles['fontsize'] = float(self.raw_styles['fontsize'])

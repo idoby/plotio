@@ -3,7 +3,7 @@
 from plotio.styles import EdgeStyle, NodeStyle
 
 
-def test_node_style_coercion():
+def test_node_style_coercion() -> None:
     style = NodeStyle({'strokewidth': '2.5', 'fillcolor': 'default', 'garbage': '1'})
     mpl_kwargs = style.as_mpl_kwargs()
 
@@ -20,7 +20,7 @@ def test_node_style_coercion():
     assert 'garbage' not in mpl_kwargs
 
 
-def test_edge_style_coercion():
+def test_edge_style_coercion() -> None:
     style = EdgeStyle({'dashed': '1', 'strokecolor': '#FF0000'})
     mpl_kwargs = style.as_mpl_kwargs()
 
@@ -29,18 +29,18 @@ def test_edge_style_coercion():
     assert mpl_kwargs == {'linestyle': 'dashed', 'color': '#FF0000'}
 
 
-def test_node_style_value_error():
+def test_node_style_value_error() -> None:
     style = NodeStyle({'strokewidth': 'invalid', 'strokecolor': 'default'})
     assert 'linewidth' not in style.raw_styles
     assert style.raw_styles['edgecolor'] == 'black'
 
 
-def test_edge_style_value_error():
+def test_edge_style_value_error() -> None:
     style = EdgeStyle({'strokewidth': 'invalid'})
     assert 'linewidth' not in style.raw_styles
 
 
-def test_label_style_coercion():
+def test_label_style_coercion() -> None:
     from plotio.styles import LabelStyle
 
     style = LabelStyle({'fontsize': '14', 'fontcolor': 'default'})
