@@ -117,18 +117,10 @@ def node_artists(node: DrawIONode, scale: float, config: RenderConfig, font_scal
 
     artists: list[Artist] = []
 
-    edge_color = node.style.raw_styles.get('strokecolor', 'black')
-    if edge_color == 'default':
-        edge_color = 'black'
-
-    fill_color = node.style.raw_styles.get('fillcolor', 'white')
-    if fill_color == 'default':
-        fill_color = 'white'
-
     default_theme: dict[str, StyleValue] = {
-        'facecolor': str(fill_color),
-        'edgecolor': str(edge_color),
-        'linewidth': float(node.style.raw_styles.get('strokewidth', '1.0')),
+        'facecolor': str(node.style.raw_styles.get('facecolor', 'white')),
+        'edgecolor': str(node.style.raw_styles.get('edgecolor', 'black')),
+        'linewidth': float(node.style.raw_styles.get('linewidth', 1.0)),
         'zorder': 2,
     }
 
@@ -242,14 +234,10 @@ def edge_artists(graph: DrawIOGraph, edge: DrawIOEdge, config: RenderConfig, fon
     end_size = float(edge.style.raw_styles.get('endsize', '6'))
     mutation_scale = end_size / 6.0 * 15
 
-    edge_color = edge.style.raw_styles.get('strokecolor', 'black')
-    if edge_color == 'default':
-        edge_color = 'black'
-
     default_theme: dict[str, StyleValue] = {
-        'color': str(edge_color),
-        'linewidth': stroke_width,
-        'linestyle': 'dashed' if edge.style.raw_styles.get('dashed') == '1' else 'solid',
+        'color': str(edge.style.raw_styles.get('color', 'black')),
+        'linewidth': float(edge.style.raw_styles.get('linewidth', 1.0)),
+        'linestyle': str(edge.style.raw_styles.get('linestyle', 'solid')),
         'capstyle': 'round',
         'joinstyle': 'round',
         'mutation_scale': mutation_scale,

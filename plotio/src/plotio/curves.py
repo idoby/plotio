@@ -124,6 +124,13 @@ def interpolate_path(path: list[Point], resolution: int = 20) -> list[Point]:
     for i in range(len(points) - 3):
         p0, p1, p2, p3 = points[i], points[i + 1], points[i + 2], points[i + 3]
         segment = catmull_rom_spline(p0, p1, p2, p3, n_points=resolution)
-        smooth_path.extend(segment)
+        
+        # np.linspace includes the endpoint by default, which means segment[-1] is exactly p2.
+        # To prevent consecutive duplicate points (which breaks tangent math in FancyArrowPatch), 
+        # we omit the last point of every segment except the final one.
+        if i == len(points) - 4:
+            smooth_path.extend(segment)
+        else:
+            smooth_path.extend(segment[:-1])
 
     return smooth_path

@@ -60,4 +60,9 @@ def test_interpolate_path_cubic() -> None:
 def test_interpolate_path_catmull() -> None:
     path5 = [Point(0, 0), Point(50, 50), Point(100, 50), Point(150, 0), Point(200, 100)]
     res = interpolate_path(path5, 5)
-    assert len(res) == 20
+    # 4 segments * 5 points = 20 points total. Subtract 3 overlapping endpoints = 17 points
+    assert len(res) == 17
+    
+    # Ensure no consecutive duplicate points
+    for i in range(1, len(res)):
+        assert res[i] != res[i - 1]

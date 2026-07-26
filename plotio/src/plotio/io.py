@@ -3,6 +3,7 @@
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
+from plotio.constants import DEFAULT_PAGE_HEIGHT, DEFAULT_PAGE_SCALE, DEFAULT_PAGE_WIDTH
 from plotio.core import DrawIOGraph
 from plotio.errors import ParseError
 from plotio.parse import parse_root_cell
@@ -31,9 +32,9 @@ def parse_drawio_xml(file_path: Path) -> DrawIOGraph:
         raise ParseError('Invalid Draw.io XML: No mxGraphModel found.')
 
     # Calculate scale
-    page_width = float(graph_model.get('pageWidth', 850))
-    page_height = float(graph_model.get('pageHeight', 1100))
-    page_scale_factor = float(graph_model.get('pageScale', 1))
+    page_width = float(graph_model.get('pageWidth', DEFAULT_PAGE_WIDTH))
+    page_height = float(graph_model.get('pageHeight', DEFAULT_PAGE_HEIGHT))
+    page_scale_factor = float(graph_model.get('pageScale', DEFAULT_PAGE_SCALE))
 
     # Scale factor: draw.io points -> canvas units (0.0 to 1.0 width)
     coord_scale = 1.0 / (page_width * page_scale_factor)
