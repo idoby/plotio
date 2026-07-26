@@ -49,3 +49,11 @@ def test_label_style_coercion() -> None:
 
     style2 = LabelStyle({'fontsize': 'invalid'})
     assert style2.raw_styles['fontsize'] == 'invalid'
+
+
+def test_as_mpl_text_kwargs() -> None:
+    from plotio.styles import DrawioStyle
+
+    style = DrawioStyle({'fontsize': 14.0, 'color': 'red', 'garbage': 'bin'})
+    mpl_text = style.as_mpl_text_kwargs()
+    assert mpl_text == {'fontsize': 14.0, 'color': 'red'}

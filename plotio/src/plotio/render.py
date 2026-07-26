@@ -1,6 +1,7 @@
 """Rendering logic for plotio."""
 
 from collections import ChainMap
+from dataclasses import dataclass
 from pathlib import Path
 
 import matplotlib.axes as maxes
@@ -13,7 +14,6 @@ from matplotlib.artist import Artist
 from matplotlib.collections import LineCollection
 from matplotlib.patches import FancyArrowPatch
 
-from plotio.constants import PlotioConfig
 from plotio.core import BoundingBox, DrawIOEdge, DrawIOEdgeLabel, DrawIOGraph, DrawIONode, Point
 from plotio.errors import RenderError
 from plotio.geometry import get_path_point_and_tangent, label_anchor
@@ -22,42 +22,42 @@ from plotio.routing import calculate_edge_path, resolve_endpoints
 from plotio.styles import StyleValue
 
 
-def render_drawio(
-        file_path: Path | str,
-        ax: maxes.Axes,
-        node_style_overrides: dict[str, dict[str, dict[str, StyleValue]]] | None = None,
-        edge_style_overrides: dict[str, dict[str, dict[str, StyleValue]]] | None = None,
-        label_style_overrides: dict[str, dict[str, dict[str, StyleValue]]] | None = None,
-        draw_bounding_boxes: bool = False,
-) -> list[Artist]:
-    """Render directly to a matplotlib Axes object using an axes transform.
+@dataclass
+class RenderConfig:
+    """Configuration for rendering options and style overrides."""
+
+    dpi: int = 300
+    transparent: bool = True
+    draw_bounding_boxes: bool = False
+    mutation_scale_base: float = 15.0
+    global_font_scale: float = 1.0
+    node_style_overrides: dict[str, dict[str, dict[str, StyleValue]]] | None = None
+    edge_style_overrides: dict[str, dict[str, dict[str, StyleValue]]] | None = None
+    label_style_overrides: dict[str, dict[str, dict[str, StyleValue]]] | None = None
+
+
+def render_drawio(file_path: Path | str, ax: maxes.Axes, config: RenderConfig | None = None) -> list[Artist]:
+    """Render a Draw.io XML file onto a Matplotlib Axes object.
 
     Args:
-        file_path: Path to the draw.io XML file.
-        ax: Matplotlib Axes to render onto.
-        node_style_overrides: Optional style overrides for nodes.
-        edge_style_overrides: Optional style overrides for edges.
-        label_style_overrides: Optional style overrides for labels.
-        draw_bounding_boxes: Whether to draw bounding boxes around nodes for debugging.
+        file_path: Path to the Draw.io XML file.
+        ax: Matplotlib Axes to draw onto.
+        config: Optional configuration for rendering.
 
     Returns:
         List of created matplotlib Artist objects.
     """
+    if config is None:
+        config = RenderConfig()
+
     file_path = Path(file_path)
     graph = parse_drawio_xml(file_path)
 
     bbox = ax.get_window_extent().transformed(ax.figure.dpi_scale_trans.inverted())
     width_points = bbox.width * 72
-    font_scale = width_points * graph.coord_scale
+    font_scale = width_points * graph.coord_scale * config.global_font_scale
 
-    artists = artists_from_graph(
-            graph,
-            node_style_overrides=node_style_overrides,
-            edge_style_overrides=edge_style_overrides,
-            label_style_overrides=label_style_overrides,
-            draw_bounding_boxes=draw_bounding_boxes,
-            font_scale=font_scale,
-    )
+    artists = artists_from_graph(graph, config=config, font_scale=font_scale)
 
     transform = mtransforms.Affine2D().scale(1, -1) + ax.transData
 
@@ -79,77 +79,40 @@ def render_drawio(
     return artists
 
 
-def render(
-        input_path: str,
-        output_path: str,
-        dpi: int = 300,
-        node_style_overrides: dict[str, dict[str, dict[str, StyleValue]]] | None = None,
-        edge_style_overrides: dict[str, dict[str, dict[str, StyleValue]]] | None = None,
-        label_style_overrides: dict[str, dict[str, dict[str, StyleValue]]] | None = None,
-        draw_bounding_boxes: bool = False,
-) -> None:
+def render(input_path: str, output_path: str, config: RenderConfig | None = None) -> None:
     """High-level public render function.
 
     Args:
         input_path: Path to the Draw.io XML file.
         output_path: Path to save the rendered output.
-        dpi: Dots per inch for the output image. Default is 300 for high resolution.
-        node_style_overrides: Optional style overrides for nodes.
-        edge_style_overrides: Optional style overrides for edges.
-        label_style_overrides: Optional style overrides for labels.
-        draw_bounding_boxes: Whether to draw bounding boxes around nodes for debugging.
+        config: Optional configuration for rendering.
     """
+    if config is None:
+        config = RenderConfig()
+
     fig, ax = plt.subplots()
     ax.set_aspect('equal')
     ax.axis('off')
-    render_drawio(
-            input_path,
-            ax,
-            node_style_overrides=node_style_overrides,
-            edge_style_overrides=edge_style_overrides,
-            label_style_overrides=label_style_overrides,
-            draw_bounding_boxes=draw_bounding_boxes,
-    )
-    fig.savefig(output_path, bbox_inches='tight', pad_inches=0.1, dpi=dpi)
+    render_drawio(input_path, ax, config=config)
+    fig.savefig(output_path, bbox_inches='tight', pad_inches=0.1, dpi=config.dpi, transparent=config.transparent)
     plt.close(fig)
 
 
-def artists_from_graph(
-        graph: DrawIOGraph,
-        node_style_overrides: dict[str, dict[str, dict[str, StyleValue]]] | None = None,
-        edge_style_overrides: dict[str, dict[str, dict[str, StyleValue]]] | None = None,
-        label_style_overrides: dict[str, dict[str, dict[str, StyleValue]]] | None = None,
-        draw_bounding_boxes: bool = False,
-        font_scale: float = 1.0,
-) -> list[Artist]:
+def artists_from_graph(graph: DrawIOGraph, config: RenderConfig, font_scale: float = 1.0) -> list[Artist]:
     artists: list[Artist] = []
 
     for node in graph.nodes.values():
-        artists.extend(
-                node_artists(
-                        node, graph.coord_scale, node_style_overrides, label_style_overrides, draw_bounding_boxes,
-                        font_scale
-                )
-        )
+        artists.extend(node_artists(node, graph.coord_scale, config, font_scale))
 
     for edge in graph.edges:
-        artists.extend(edge_artists(graph, edge, edge_style_overrides, label_style_overrides, font_scale))
+        artists.extend(edge_artists(graph, edge, config, font_scale))
 
     return artists
 
 
-def node_artists(
-        node: DrawIONode,
-        scale: float,
-        node_style_overrides: dict[str, dict[str, dict[str, StyleValue]]] | None = None,
-        label_style_overrides: dict[str, dict[str, dict[str, StyleValue]]] | None = None,
-        draw_bounding_boxes: bool = False,
-        font_scale: float = 1.0,
-) -> list[Artist]:
-    if node_style_overrides is None:
-        node_style_overrides = {}
-    if label_style_overrides is None:
-        label_style_overrides = {}
+def node_artists(node: DrawIONode, scale: float, config: RenderConfig, font_scale: float = 1.0) -> list[Artist]:
+    node_style_overrides = config.node_style_overrides or {}
+    label_style_overrides = config.label_style_overrides or {}
 
     artists: list[Artist] = []
 
@@ -173,17 +136,16 @@ def node_artists(
 
     bbox = node.bounding_box
 
-    if draw_bounding_boxes:
+    if config.draw_bounding_boxes:
         bbox_patch = mpatches.Rectangle(
-                (bbox.x, bbox.y), bbox.w, bbox.h, facecolor='none', edgecolor='red', linewidth=0.5, zorder=4
+            (bbox.x, bbox.y), bbox.w, bbox.h, facecolor='none', edgecolor='red', linewidth=0.5, zorder=4
         )
         artists.append(bbox_patch)
 
     if node.shape is not None:
         patch: mpatches.Patch
         if node.shape == 'ellipse':
-            patch = mpatches.Ellipse((bbox.x + bbox.w / 2, bbox.y + bbox.h / 2), bbox.w, bbox.h,
-                                     **node_styles)  # type: ignore[arg-type]
+            patch = mpatches.Ellipse((bbox.x + bbox.w / 2, bbox.y + bbox.h / 2), bbox.w, bbox.h, **node_styles)  # type: ignore[arg-type]
         elif node.shape == 'rounded_rectangle':
             arc_size = float(node.style.raw_styles.get('arcsize', 12)) / 100.0
             r = min(bbox.w, bbox.h) * arc_size
@@ -247,35 +209,27 @@ def node_artists(
         label_styles = _apply_style_overrides(node.metadata, label_kwargs_mpl, label_style_overrides, label_default)
 
         label_anchor_pt = label_anchor(
-                bbox,
-                position_x,
-                position_y,
-                halignment,
-                valignment,
-                spacing_global,
-                spacing_top,
-                spacing_bottom,
-                spacing_left,
-                spacing_right,
+            bbox,
+            position_x,
+            position_y,
+            halignment,
+            valignment,
+            spacing_global,
+            spacing_top,
+            spacing_bottom,
+            spacing_left,
+            spacing_right,
         )
         artists.append(
-                mtext.Text(label_anchor_pt.x, label_anchor_pt.y, node.label, **label_styles)  # type: ignore[arg-type]
+            mtext.Text(label_anchor_pt.x, label_anchor_pt.y, node.label, **label_styles)  # type: ignore[arg-type]
         )
 
     return artists
 
 
-def edge_artists(
-        graph: DrawIOGraph,
-        edge: DrawIOEdge,
-        edge_style_overrides: dict[str, dict[str, dict[str, StyleValue]]] | None = None,
-        label_style_overrides: dict[str, dict[str, dict[str, StyleValue]]] | None = None,
-        font_scale: float = 1.0,
-) -> list[Artist]:
-    if edge_style_overrides is None:
-        edge_style_overrides = {}
-    if label_style_overrides is None:
-        label_style_overrides = {}
+def edge_artists(graph: DrawIOGraph, edge: DrawIOEdge, config: RenderConfig, font_scale: float = 1.0) -> list[Artist]:
+    edge_style_overrides = config.edge_style_overrides or {}
+    label_style_overrides = config.label_style_overrides or {}
 
     start_pt, end_pt = resolve_endpoints(edge, graph)
     if not start_pt or not end_pt:
@@ -307,7 +261,7 @@ def edge_artists(
     start_arrow_type = str(edge.style.raw_styles.get('startarrow', 'none'))
     end_arrow_type = str(edge.style.raw_styles.get('endarrow', 'classic'))
 
-    artists = _create_polyline_edge(path, start_arrow_type, end_arrow_type, edge_styles)
+    artists = _create_polyline_edge(path, start_arrow_type, end_arrow_type, edge_styles, config.mutation_scale_base)
 
     for label in edge.labels:
         artists.append(_create_edge_label_artist(label, path, label_style_overrides, graph.coord_scale, font_scale))
@@ -319,10 +273,10 @@ _vertical_align_map = {'top': 'top', 'middle': 'center', 'bottom': 'bottom'}
 
 
 def _apply_style_overrides(
-        metadata: dict[str, str],
-        drawio_kwargs: dict[str, StyleValue],
-        overrides: dict[str, dict[str, dict[str, StyleValue]]],
-        default_theme: dict[str, StyleValue],
+    metadata: dict[str, str],
+    drawio_kwargs: dict[str, StyleValue],
+    overrides: dict[str, dict[str, dict[str, StyleValue]]],
+    default_theme: dict[str, StyleValue],
 ) -> dict[str, StyleValue]:
     """Resolve styles using a ChainMap of inheritance."""
     user_overrides: dict[str, StyleValue] = {}
@@ -338,7 +292,11 @@ def _apply_style_overrides(
 
 
 def _create_polyline_edge(
-        path: list[Point], start_arrow_type: str | None, end_arrow_type: str | None, style_kwargs: dict[str, StyleValue]
+    path: list[Point],
+    start_arrow_type: str | None,
+    end_arrow_type: str | None,
+    style_kwargs: dict[str, StyleValue],
+    mutation_scale_base: float = 15.0,
 ) -> list[Artist]:
     if len(path) < 2:
         raise RenderError(f'Edge path must contain at least 2 points (got {len(path)}): {path}')
@@ -365,7 +323,7 @@ def _create_polyline_edge(
     path = [new_first] + path[1:-1] + [new_last]
     path_np = [np.asarray(p) for p in path]
 
-    ms = float(style_kwargs.pop('mutation_scale', PlotioConfig.mutation_scale_base))
+    ms = float(style_kwargs.pop('mutation_scale', mutation_scale_base))
 
     lc = LineCollection([path_np], **style_kwargs)  # type: ignore[arg-type]
     artists.append(lc)
@@ -375,13 +333,13 @@ def _create_polyline_edge(
         arrow_style_kwargs['linewidth'] = 0
         arrow_style_kwargs.pop('linestyle', None)
         arrow = FancyArrowPatch(
-                (p_second.x, p_second.y),
-                (p_first.x, p_first.y),
-                arrowstyle='-|>',
-                mutation_scale=ms,
-                shrinkA=0,
-                shrinkB=0,
-                **arrow_style_kwargs,  # type: ignore[arg-type]
+            (p_second.x, p_second.y),
+            (p_first.x, p_first.y),
+            arrowstyle='-|>',
+            mutation_scale=ms,
+            shrinkA=0,
+            shrinkB=0,
+            **arrow_style_kwargs,  # type: ignore[arg-type]
         )
         artists.append(arrow)
     if end_arrow_type is not None:
@@ -389,13 +347,13 @@ def _create_polyline_edge(
         arrow_style_kwargs['linewidth'] = 0
         arrow_style_kwargs.pop('linestyle', None)
         arrow = FancyArrowPatch(
-                (p_prev.x, p_prev.y),
-                (p_last.x, p_last.y),
-                arrowstyle='-|>',
-                mutation_scale=ms,
-                shrinkA=0,
-                shrinkB=0,
-                **arrow_style_kwargs,  # type: ignore[arg-type]
+            (p_prev.x, p_prev.y),
+            (p_last.x, p_last.y),
+            arrowstyle='-|>',
+            mutation_scale=ms,
+            shrinkA=0,
+            shrinkB=0,
+            **arrow_style_kwargs,  # type: ignore[arg-type]
         )
         artists.append(arrow)
 
@@ -403,11 +361,11 @@ def _create_polyline_edge(
 
 
 def _create_edge_label_artist(
-        label_obj: DrawIOEdgeLabel,
-        path: list[Point],
-        label_style_overrides: dict[str, dict[str, dict[str, StyleValue]]],
-        scale: float,
-        font_scale: float = 1.0,
+    label_obj: DrawIOEdgeLabel,
+    path: list[Point],
+    label_style_overrides: dict[str, dict[str, dict[str, StyleValue]]],
+    scale: float,
+    font_scale: float = 1.0,
 ) -> Artist:
     pos_pt, tangent = get_path_point_and_tangent(path, label_obj.position)
 
@@ -430,16 +388,16 @@ def _create_edge_label_artist(
     spacing_right = float(label_obj.style.raw_styles.get('spacingright', 0)) * scale
 
     final_anchor = label_anchor(
-            bbox,
-            position_x,
-            position_y,
-            halign,
-            valign,
-            spacing_global,
-            spacing_top,
-            spacing_bottom,
-            spacing_left,
-            spacing_right,
+        bbox,
+        position_x,
+        position_y,
+        halign,
+        valign,
+        spacing_global,
+        spacing_top,
+        spacing_bottom,
+        spacing_left,
+        spacing_right,
     )
 
     default_theme: dict[str, StyleValue] = {

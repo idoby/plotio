@@ -39,8 +39,8 @@ class DrawioStyle:
                 kwargs[k] = v
         return kwargs
 
-    def parse_font_styles(self) -> None:
-        """Parse raw font styles into typed properties."""
+    def __post_init__(self) -> None:
+        """Parse raw font styles into typed properties after initialization."""
         if 'fontsize' in self.raw_styles:
             try:
                 self.raw_styles['fontsize'] = float(self.raw_styles['fontsize'])
@@ -73,7 +73,7 @@ class NodeStyle(DrawioStyle):
             val = self.raw_styles['strokecolor']
             self.raw_styles['edgecolor'] = 'black' if val == 'default' else val
 
-        self.parse_font_styles()
+        super().__post_init__()
 
 
 @dataclass
@@ -82,6 +82,7 @@ class EdgeStyle(DrawioStyle):
 
     def __post_init__(self) -> None:
         """Parse raw styles into typed properties after initialization."""
+        super().__post_init__()
         if 'strokewidth' in self.raw_styles:
             try:
                 self.raw_styles['linewidth'] = float(self.raw_styles['strokewidth'])
@@ -100,14 +101,3 @@ class EdgeStyle(DrawioStyle):
 class LabelStyle(DrawioStyle):
     """Style configuration for labels."""
 
-    def __post_init__(self) -> None:
-        """Parse raw styles into typed properties after initialization."""
-        if 'fontsize' in self.raw_styles:
-            try:
-                self.raw_styles['fontsize'] = float(self.raw_styles['fontsize'])
-            except ValueError:
-                pass
-
-        if 'fontcolor' in self.raw_styles:
-            val = self.raw_styles['fontcolor']
-            self.raw_styles['color'] = 'black' if val == 'default' else val
