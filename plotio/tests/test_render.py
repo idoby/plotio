@@ -89,10 +89,6 @@ def test_node_artists_shapes() -> None:
     node_rounded = DrawIONode('1', BoundingBox(0, 0, 10, 10), 'rounded_rectangle', '', NodeStyle({'arcsize': '20'}))
     assert isinstance(node_artists(node_rounded, 1.0, RenderConfig())[0], FancyBboxPatch)
 
-    node_unknown = DrawIONode('1', BoundingBox(0, 0, 10, 10), 'hexagon', '', NodeStyle())
-    with pytest.raises(RenderError, match='Unsupported node shape'):
-        node_artists(node_unknown, 1.0, RenderConfig())
-
 
 def test_edge_artists_default_colors() -> None:
     graph = DrawIOGraph(100, 100, 1.0, {}, [])

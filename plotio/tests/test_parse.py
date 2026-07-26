@@ -38,6 +38,35 @@ def test_parse_vertex_missing_geometry_raises_error() -> None:
         _parse_vertex('1', cell, {}, 1.0)
 
 
+def test_parse_vertex_explicit_shapes() -> None:
+    xml_str1 = '<mxCell id="1" vertex="1" style="shape=rectangle;"><mxGeometry as="geometry"/></mxCell>'
+    cell1 = ET.fromstring(xml_str1)
+    node1 = _parse_vertex('1', cell1, {}, 1.0)
+    assert node1.shape == 'rectangle'
+
+    xml_str2 = '<mxCell id="2" vertex="1" style="shape=rounded_rectangle;"><mxGeometry as="geometry"/></mxCell>'
+    cell2 = ET.fromstring(xml_str2)
+    node2 = _parse_vertex('2', cell2, {}, 1.0)
+    assert node2.shape == 'rounded_rectangle'
+
+    xml_str3 = '<mxCell id="3" vertex="1" style="shape=step;"><mxGeometry as="geometry"/></mxCell>'
+    cell3 = ET.fromstring(xml_str3)
+    node3 = _parse_vertex('3', cell3, {}, 1.0)
+    assert node3.shape == 'step'
+
+
+def test_parse_vertex_unsupported_shape_raises_error() -> None:
+    xml_str = """
+    <mxCell id="1" vertex="1" style="shape=hexagon;">
+        <mxGeometry x="10" y="20" width="100" height="50" as="geometry" />
+    </mxCell>
+    """
+    cell = ET.fromstring(xml_str)
+
+    with pytest.raises(ParseError, match='Unsupported shape hexagon'):
+        _parse_vertex('1', cell, {}, 1.0)
+
+
 def test_parse_edge_label_success() -> None:
     xml_str = """
     <mxCell id="2" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" vertex="1" connectable="0">

@@ -3,6 +3,8 @@
 Math and geometry logic is preserved exactly as in the original drawio_render_utils.py.
 """
 
+from typing import assert_never
+
 import numpy as np
 
 from .core import BoundingBox, DrawIOEdge, DrawIONode, Point
@@ -39,7 +41,7 @@ def intersect_ray_with_geometry(start: Point, target: Point, node: DrawIONode) -
 
         p = Point(start.x + t * dx, start.y + t * dy)
         return p
-    else:
+    elif node.shape == 'rectangle' or node.shape == 'rounded_rectangle' or node.shape == 'step' or node.shape is None:
         # Rectangle intersection
         t_min = float('inf')
 
@@ -62,19 +64,21 @@ def intersect_ray_with_geometry(start: Point, target: Point, node: DrawIONode) -
 
         p = Point(start.x + t_min * dx, start.y + t_min * dy)
         return p
+    else:
+        assert_never(node.shape)
 
 
 def label_anchor(
-    bbox: BoundingBox,
-    position_x: str,
-    position_y: str,
-    halignment: str,
-    valignment: str,
-    global_spacing: float,
-    spacing_top: float,
-    spacing_bottom: float,
-    spacing_left: float,
-    spacing_right: float,
+        bbox: BoundingBox,
+        position_x: str,
+        position_y: str,
+        halignment: str,
+        valignment: str,
+        global_spacing: float,
+        spacing_top: float,
+        spacing_bottom: float,
+        spacing_left: float,
+        spacing_right: float,
 ) -> Point:
     """Calculate the anchor point for a label based on alignment and offsets.
 
@@ -181,7 +185,8 @@ def get_path_point_and_tangent(path: list[Point], relative_pos: float) -> tuple[
 
 
 def resolve_node_terminal(
-    node: DrawIONode, edge: DrawIOEdge, is_source: bool, hint_pt: Point | None = None, hint_is_explicit: bool = False
+        node: DrawIONode, edge: DrawIOEdge, is_source: bool, hint_pt: Point | None = None,
+        hint_is_explicit: bool = False
 ) -> Point:
     """Resolve the precise terminal point on a node for an edge.
 

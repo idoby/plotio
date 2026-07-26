@@ -3,6 +3,7 @@
 from collections import ChainMap
 from dataclasses import dataclass
 from pathlib import Path
+from typing import assert_never
 
 import matplotlib.axes as maxes
 import matplotlib.patches as mpatches
@@ -138,14 +139,15 @@ def node_artists(node: DrawIONode, scale: float, config: RenderConfig, font_scal
 
     if config.draw_bounding_boxes:
         bbox_patch = mpatches.Rectangle(
-            (bbox.x, bbox.y), bbox.w, bbox.h, facecolor='none', edgecolor='red', linewidth=0.5, zorder=4
+                (bbox.x, bbox.y), bbox.w, bbox.h, facecolor='none', edgecolor='red', linewidth=0.5, zorder=4
         )
         artists.append(bbox_patch)
 
     if node.shape is not None:
         patch: mpatches.Patch
         if node.shape == 'ellipse':
-            patch = mpatches.Ellipse((bbox.x + bbox.w / 2, bbox.y + bbox.h / 2), bbox.w, bbox.h, **node_styles)  # type: ignore[arg-type]
+            patch = mpatches.Ellipse((bbox.x + bbox.w / 2, bbox.y + bbox.h / 2), bbox.w, bbox.h,
+                                     **node_styles)  # type: ignore[arg-type]
         elif node.shape == 'rounded_rectangle':
             arc_size = float(node.style.raw_styles.get('arcsize', 12)) / 100.0
             r = min(bbox.w, bbox.h) * arc_size
@@ -180,7 +182,7 @@ def node_artists(node: DrawIONode, scale: float, config: RenderConfig, font_scal
             ]
             patch = mpatches.Polygon(verts, **node_styles)  # type: ignore[arg-type]
         else:
-            raise RenderError(f'Unsupported node shape for node {node.id}: {node.shape}')
+            assert_never(node.shape)
 
         artists.append(patch)
 
@@ -209,19 +211,19 @@ def node_artists(node: DrawIONode, scale: float, config: RenderConfig, font_scal
         label_styles = _apply_style_overrides(node.metadata, label_kwargs_mpl, label_style_overrides, label_default)
 
         label_anchor_pt = label_anchor(
-            bbox,
-            position_x,
-            position_y,
-            halignment,
-            valignment,
-            spacing_global,
-            spacing_top,
-            spacing_bottom,
-            spacing_left,
-            spacing_right,
+                bbox,
+                position_x,
+                position_y,
+                halignment,
+                valignment,
+                spacing_global,
+                spacing_top,
+                spacing_bottom,
+                spacing_left,
+                spacing_right,
         )
         artists.append(
-            mtext.Text(label_anchor_pt.x, label_anchor_pt.y, node.label, **label_styles)  # type: ignore[arg-type]
+                mtext.Text(label_anchor_pt.x, label_anchor_pt.y, node.label, **label_styles)  # type: ignore[arg-type]
         )
 
     return artists
@@ -273,10 +275,10 @@ _vertical_align_map = {'top': 'top', 'middle': 'center', 'bottom': 'bottom'}
 
 
 def _apply_style_overrides(
-    metadata: dict[str, str],
-    drawio_kwargs: dict[str, StyleValue],
-    overrides: dict[str, dict[str, dict[str, StyleValue]]],
-    default_theme: dict[str, StyleValue],
+        metadata: dict[str, str],
+        drawio_kwargs: dict[str, StyleValue],
+        overrides: dict[str, dict[str, dict[str, StyleValue]]],
+        default_theme: dict[str, StyleValue],
 ) -> dict[str, StyleValue]:
     """Resolve styles using a ChainMap of inheritance."""
     user_overrides: dict[str, StyleValue] = {}
@@ -292,11 +294,11 @@ def _apply_style_overrides(
 
 
 def _create_polyline_edge(
-    path: list[Point],
-    start_arrow_type: str | None,
-    end_arrow_type: str | None,
-    style_kwargs: dict[str, StyleValue],
-    mutation_scale_base: float = 15.0,
+        path: list[Point],
+        start_arrow_type: str | None,
+        end_arrow_type: str | None,
+        style_kwargs: dict[str, StyleValue],
+        mutation_scale_base: float = 15.0,
 ) -> list[Artist]:
     if len(path) < 2:
         raise RenderError(f'Edge path must contain at least 2 points (got {len(path)}): {path}')
@@ -333,13 +335,13 @@ def _create_polyline_edge(
         arrow_style_kwargs['linewidth'] = 0
         arrow_style_kwargs.pop('linestyle', None)
         arrow = FancyArrowPatch(
-            (p_second.x, p_second.y),
-            (p_first.x, p_first.y),
-            arrowstyle='-|>',
-            mutation_scale=ms,
-            shrinkA=0,
-            shrinkB=0,
-            **arrow_style_kwargs,  # type: ignore[arg-type]
+                (p_second.x, p_second.y),
+                (p_first.x, p_first.y),
+                arrowstyle='-|>',
+                mutation_scale=ms,
+                shrinkA=0,
+                shrinkB=0,
+                **arrow_style_kwargs,  # type: ignore[arg-type]
         )
         artists.append(arrow)
     if end_arrow_type is not None:
@@ -347,13 +349,13 @@ def _create_polyline_edge(
         arrow_style_kwargs['linewidth'] = 0
         arrow_style_kwargs.pop('linestyle', None)
         arrow = FancyArrowPatch(
-            (p_prev.x, p_prev.y),
-            (p_last.x, p_last.y),
-            arrowstyle='-|>',
-            mutation_scale=ms,
-            shrinkA=0,
-            shrinkB=0,
-            **arrow_style_kwargs,  # type: ignore[arg-type]
+                (p_prev.x, p_prev.y),
+                (p_last.x, p_last.y),
+                arrowstyle='-|>',
+                mutation_scale=ms,
+                shrinkA=0,
+                shrinkB=0,
+                **arrow_style_kwargs,  # type: ignore[arg-type]
         )
         artists.append(arrow)
 
@@ -361,11 +363,11 @@ def _create_polyline_edge(
 
 
 def _create_edge_label_artist(
-    label_obj: DrawIOEdgeLabel,
-    path: list[Point],
-    label_style_overrides: dict[str, dict[str, dict[str, StyleValue]]],
-    scale: float,
-    font_scale: float = 1.0,
+        label_obj: DrawIOEdgeLabel,
+        path: list[Point],
+        label_style_overrides: dict[str, dict[str, dict[str, StyleValue]]],
+        scale: float,
+        font_scale: float = 1.0,
 ) -> Artist:
     pos_pt, tangent = get_path_point_and_tangent(path, label_obj.position)
 
@@ -388,16 +390,16 @@ def _create_edge_label_artist(
     spacing_right = float(label_obj.style.raw_styles.get('spacingright', 0)) * scale
 
     final_anchor = label_anchor(
-        bbox,
-        position_x,
-        position_y,
-        halign,
-        valign,
-        spacing_global,
-        spacing_top,
-        spacing_bottom,
-        spacing_left,
-        spacing_right,
+            bbox,
+            position_x,
+            position_y,
+            halign,
+            valign,
+            spacing_global,
+            spacing_top,
+            spacing_bottom,
+            spacing_left,
+            spacing_right,
     )
 
     default_theme: dict[str, StyleValue] = {

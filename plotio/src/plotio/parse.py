@@ -3,7 +3,7 @@
 import xml.etree.ElementTree as ET
 from typing import TypedDict
 
-from plotio.core import BoundingBox, DrawIOEdge, DrawIOEdgeLabel, DrawIONode, Point
+from plotio.core import BoundingBox, DrawIOEdge, DrawIOEdgeLabel, DrawIONode, Point, ShapeType
 from plotio.errors import ParseError
 from plotio.html import clean_html_label
 from plotio.styles import EdgeStyle, LabelStyle, NodeStyle, StyleValue
@@ -120,7 +120,7 @@ def _parse_vertex(cid: str, cell: ET.Element, metadata: dict[str, str], scale: f
 
     if 'shape' not in style_dict:
         if 'edgelabel' in style_dict or 'text' in style_dict:
-            shape: str | None = None
+            shape: ShapeType | None = None
         elif 'ellipse' in style_dict:
             shape = 'ellipse'
         elif style_dict.get('rounded') == '1':
@@ -128,7 +128,17 @@ def _parse_vertex(cid: str, cell: ET.Element, metadata: dict[str, str], scale: f
         else:
             raise ParseError(f'Unsupported or missing shape for vertex cell {cid} with style: {style_str}')
     else:
-        shape = str(style_dict['shape'])
+        shape_str = str(style_dict['shape'])
+        if shape_str == 'rectangle':
+            shape = 'rectangle'
+        elif shape_str == 'ellipse':
+            shape = 'ellipse'
+        elif shape_str == 'rounded_rectangle':
+            shape = 'rounded_rectangle'
+        elif shape_str == 'step':
+            shape = 'step'
+        else:
+            raise ParseError(f'Unsupported shape {shape_str}')
 
     label = metadata.get('value') or metadata.get('label') or ''
     label = clean_html_label(label)

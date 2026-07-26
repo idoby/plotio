@@ -1,10 +1,13 @@
 """Core domain models for the plotio package."""
 
 from dataclasses import dataclass, field
+from typing import Literal
 
 import numpy as np
 
 from plotio.styles import EdgeStyle, LabelStyle, NodeStyle
+
+ShapeType = Literal['ellipse', 'rounded_rectangle', 'rectangle', 'step']
 
 
 @dataclass(frozen=True)
@@ -36,7 +39,7 @@ class Point:
 
     def norm(self) -> float:
         """Calculate the Euclidean norm of the point."""
-        return float(np.sqrt(self.x**2 + self.y**2).item())
+        return float(np.sqrt(self.x ** 2 + self.y ** 2).item())
 
     def unit(self) -> 'Point':
         """Get a unit vector pointing in the same direction."""
@@ -72,7 +75,7 @@ class DrawIONode:
     id: str
 
     bounding_box: BoundingBox
-    shape: str | None
+    shape: ShapeType | None
     label: str = ''
 
     style: NodeStyle = field(default_factory=NodeStyle)
