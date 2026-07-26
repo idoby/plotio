@@ -1,7 +1,7 @@
 """XML parsing logic for Draw.io files post-IO."""
 
 import xml.etree.ElementTree as ET
-from typing import TypedDict
+from typing import Literal, TypedDict
 
 from plotio.core import BoundingBox, DrawIOEdge, DrawIOEdgeLabel, DrawIONode, Point, ShapeType
 from plotio.errors import ParseError
@@ -12,6 +12,18 @@ from plotio.styles import EdgeStyle, LabelStyle, NodeStyle, StyleValue
 class CellData(TypedDict):
     cell: ET.Element
     metadata: dict[str, str]
+
+
+def _categorize_cell(cell: ET.Element) -> Literal['node', 'edge', 'edge_label', 'unknown']:
+    """Determine the logical type of a Draw.io cell."""
+    if cell.get('edge') == '1':
+        return 'edge'
+    if cell.get('vertex') == '1':
+        style_dict = _parse_style_string(cell.get('style', ''))
+        if style_dict.get('edgelabel') in ('1', ''):
+            return 'edge_label'
+        return 'node'
+    return 'unknown'
 
 
 def parse_root_cell(root_cell: ET.Element, scale: float) -> tuple[dict[str, DrawIONode], list[DrawIOEdge]]:
@@ -55,32 +67,20 @@ def parse_root_cell(root_cell: ET.Element, scale: float) -> tuple[dict[str, Draw
 
     for cid, data in raw_cells.items():
         cell = data['cell']
-        if cell.get('vertex') == '1':
-            style_str = cell.get('style', '')
+        cell_type = _categorize_cell(cell)
 
-            is_edgelabel = False
-            for p in style_str.split(';'):
-                if '=' in p:
-                    k, v = p.split('=', 1)
-                    if k.strip().lower() == 'edgelabel' and v.strip() == '1':
-                        is_edgelabel = True
-                        break
-                elif p.strip().lower() == 'edgelabel':
-                    is_edgelabel = True
-                    break
-
-            if is_edgelabel:
-                label = _parse_edge_label(cid, cell, data['metadata'], scale)
-                if label:
-                    parent_id = data['metadata'].get('parent')
-                    if parent_id:
-                        if parent_id not in edge_labels_by_parent:
-                            edge_labels_by_parent[parent_id] = []
-                        edge_labels_by_parent[parent_id].append(label)
-            else:
-                node = _parse_vertex(cid, cell, data['metadata'], scale)
-                if node:
-                    nodes[cid] = node
+        if cell_type == 'edge_label':
+            label = _parse_edge_label(cid, cell, data['metadata'], scale)
+            if label:
+                parent_id = data['metadata'].get('parent')
+                if parent_id:
+                    if parent_id not in edge_labels_by_parent:
+                        edge_labels_by_parent[parent_id] = []
+                    edge_labels_by_parent[parent_id].append(label)
+        elif cell_type == 'node':
+            node = _parse_vertex(cid, cell, data['metadata'], scale)
+            if node:
+                nodes[cid] = node
 
     for cid, data in raw_cells.items():
         cell = data['cell']

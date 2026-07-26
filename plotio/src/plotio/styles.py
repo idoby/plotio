@@ -100,4 +100,3 @@ class EdgeStyle(DrawioStyle):
 @dataclass
 class LabelStyle(DrawioStyle):
     """Style configuration for labels."""
-
