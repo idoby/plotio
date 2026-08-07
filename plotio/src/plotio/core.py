@@ -98,7 +98,7 @@ class DrawIOEdgeLabel:
     metadata: dict[str, str] = field(default_factory=dict)
 
 
-RouterType = Literal['orthogonal', 'straight']
+RouterType = Literal['orthogonal', 'straight', 'elbow']
 
 
 @dataclass(frozen=True)

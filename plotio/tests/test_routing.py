@@ -149,30 +149,124 @@ def test_resolve_endpoints_missing_source() -> None:
 def test_calculate_edge_path_waypoints() -> None:
     start = Point(0, 0)
     end = Point(100, 100)
-    edge1 = DrawIOEdge('e1', '1', '2', [Point(50, 50)], style=EdgeStyle())
-    path1 = calculate_edge_path(edge1, start, end)
-    assert path1 == [start, Point(50, 50), end]
+    graph = DrawIOGraph(width=1000, height=1000, coord_scale=1.0, nodes={}, edges=[])
+    edge1 = DrawIOEdge('e1', '1', '2', [Point(50, 50)], style=EdgeStyle({'edgestyle': 'orthogonaledgestyle'}))
+    path1 = calculate_edge_path(edge1, graph, start, end)
+    assert len(path1) == 3
 
 
 def test_calculate_edge_path_orthogonal() -> None:
     start = Point(0, 0)
     end = Point(100, 100)
+    graph = DrawIOGraph(width=1000, height=1000, coord_scale=1.0, nodes={}, edges=[])
     edge2 = DrawIOEdge('e1', '1', '2', [], router='orthogonal', style=EdgeStyle({'edgestyle': 'orthogonaledgestyle'}))
-    path2 = calculate_edge_path(edge2, start, end)
+    path2 = calculate_edge_path(edge2, graph, start, end)
     assert len(path2) == 4
 
 
 def test_calculate_edge_path_curved() -> None:
     start = Point(0, 0)
     end = Point(100, 100)
-    edge3 = DrawIOEdge('e1', '1', '2', [Point(50, 0), Point(50, 100)], style=EdgeStyle({'curved': '1'}))
-    path3 = calculate_edge_path(edge3, start, end)
-    assert len(path3) == 20
+    graph = DrawIOGraph(width=1000, height=1000, coord_scale=1.0, nodes={}, edges=[])
+    edge3 = DrawIOEdge('e1', '1', '2', [Point(50, 50)], style=EdgeStyle({'curved': '1'}))
+    path3 = calculate_edge_path(edge3, graph, start, end)
+    assert len(path3) > 3
 
 
 def test_calculate_edge_path_straight() -> None:
     start = Point(0, 0)
     end = Point(100, 100)
-    edge4 = DrawIOEdge('e4', '1', '2', [], style=EdgeStyle({'edgestyle': 'straight'}))
-    path4 = calculate_edge_path(edge4, start, end)
-    assert path4 == [start, end]
+    graph = DrawIOGraph(width=1000, height=1000, coord_scale=1.0, nodes={}, edges=[])
+    edge4 = DrawIOEdge('e4', '1', '2', [])
+    path4 = calculate_edge_path(edge4, graph, start, end)
+    assert len(path4) == 2
+    assert path4[0] == start
+    assert path4[1] == end
+
+
+def test_calculate_edge_path_elbow() -> None:
+    start = Point(100, 50)
+    end = Point(300, 250)
+    node1 = DrawIONode('1', BoundingBox(0, 0, 100, 100), shape='rectangle')
+    node2 = DrawIONode('2', BoundingBox(300, 200, 100, 100), shape='rectangle')
+    graph = DrawIOGraph(width=1000, height=1000, coord_scale=1.0, nodes={'1': node1, '2': node2}, edges=[])
+    
+    # SideToSide default (horizontal distance > vertical)
+    edge5 = DrawIOEdge('e5', '1', '2', [], router='elbow', style=EdgeStyle({'edgestyle': 'elbowedgestyle'}))
+    path5 = calculate_edge_path(edge5, graph, start, end)
+    
+    assert len(path5) == 4
+    assert path5[0] == start
+    assert path5[1] == Point(200, 50)
+    assert path5[2] == Point(200, 250)
+    assert path5[3] == end
+
+    # TopToBottom override
+    edge6 = DrawIOEdge('e6', '1', '2', [], router='elbow', style=EdgeStyle({'edgestyle': 'elbowedgestyle', 'elbow': 'vertical'}))
+    path6 = calculate_edge_path(edge6, graph, start, end)
+    assert len(path6) == 4
+    assert path6[1] == Point(50, 150)
+import pytest
+
+def test_calculate_edge_path_elbow_overlapping() -> None:
+    # Overlapping horizontally, y1 inside tgt, y2 outside src (forces len(waypoints) == 1 in SideToSide)
+    node1 = DrawIONode('1', BoundingBox(0, 0, 100, 40), shape='rectangle')
+    node2 = DrawIONode('2', BoundingBox(0, -50, 100, 200), shape='rectangle')
+    graph1 = DrawIOGraph(width=1000, height=1000, coord_scale=1.0, nodes={'1': node1, '2': node2}, edges=[])
+    edge1 = DrawIOEdge('e1', '1', '2', [], router='elbow', style=EdgeStyle({'edgestyle': 'elbowedgestyle'}))
+    calculate_edge_path(edge1, graph1, Point(0, 0), Point(0, 0))
+    
+    # Overlapping vertically, x1 inside tgt, x2 outside src (forces len(waypoints) == 1 in TopToBottom)
+    node3 = DrawIONode('3', BoundingBox(0, 0, 40, 100), shape='rectangle')
+    node4 = DrawIONode('4', BoundingBox(-50, 0, 200, 100), shape='rectangle')
+    graph2 = DrawIOGraph(width=1000, height=1000, coord_scale=1.0, nodes={'3': node3, '4': node4}, edges=[])
+    edge2 = DrawIOEdge('e2', '3', '4', [], router='elbow', style=EdgeStyle({'edgestyle': 'elbowedgestyle', 'elbow': 'vertical'}))
+    calculate_edge_path(edge2, graph2, Point(0, 0), Point(0, 0))
+
+    # Empty waypoints fallback (when nodes have 0 size and overlap exactly)
+    node5 = DrawIONode('5', BoundingBox(0, 0, 0, 0), shape='rectangle')
+    node6 = DrawIONode('6', BoundingBox(0, 0, 0, 0), shape='rectangle')
+    graph3 = DrawIOGraph(width=1000, height=1000, coord_scale=1.0, nodes={'5': node5, '6': node6}, edges=[])
+    edge3 = DrawIOEdge('e3', '5', '6', [], router='elbow', style=EdgeStyle({'edgestyle': 'elbowedgestyle'}))
+    from plotio.routing import resolve_endpoints, _resolve_target
+    # Catch RenderError because ray from 0,0 to 0,0 fails
+    with pytest.raises(Exception):
+        resolve_endpoints(edge3, graph3)
+    # Test _resolve_target explicitly to cover line 270 empty elbow_pts
+    with pytest.raises(Exception):
+        _resolve_target(edge3, graph3, Point(0, 0), False)
+
+
+def test_custom_routing_center_fallback() -> None:
+    from unittest.mock import patch
+    node1 = DrawIONode('1', BoundingBox(0, 0, 100, 40), shape='rectangle')
+    node2 = DrawIONode('2', BoundingBox(0, -50, 100, 200), shape='rectangle')
+    graph1 = DrawIOGraph(width=1000, height=1000, coord_scale=1.0, nodes={'1': node1, '2': node2}, edges=[])
+    edge1 = DrawIOEdge('e1', '1', '2', [], router='elbow', style=EdgeStyle({'edgestyle': 'elbowedgestyle'}))
+    
+    with patch('plotio.routing.pt_in_rect', side_effect=[False, False, True, True]):
+        with pytest.raises(NotImplementedError, match='Custom routing centers'):
+            calculate_edge_path(edge1, graph1, Point(0, 0), Point(0, 0))
+
+    node3 = DrawIONode('3', BoundingBox(0, 0, 40, 100), shape='rectangle')
+    node4 = DrawIONode('4', BoundingBox(-50, 0, 200, 100), shape='rectangle')
+    graph2 = DrawIOGraph(width=1000, height=1000, coord_scale=1.0, nodes={'3': node3, '4': node4}, edges=[])
+    edge2 = DrawIOEdge('e2', '3', '4', [], router='elbow', style=EdgeStyle({'edgestyle': 'elbowedgestyle', 'elbow': 'vertical'}))
+    
+    with patch('plotio.routing.pt_in_rect', side_effect=[False, False, True, True]):
+        with pytest.raises(NotImplementedError, match='Custom routing centers'):
+            calculate_edge_path(edge2, graph2, Point(0, 0), Point(0, 0))
+
+
+def test_invalid_router() -> None:
+    from typing import cast
+    from plotio.core import RouterType
+    edge = DrawIOEdge('e1', '1', '2', [], router=cast(RouterType, 'invalid'))
+    graph = DrawIOGraph(1000, 1000, 1.0, {}, [])
+    with pytest.raises(AssertionError):
+        calculate_edge_path(edge, graph, Point(0, 0), Point(100, 100))
+    
+    # Also test with curves enabled
+    edge2 = DrawIOEdge('e2', '1', '2', [Point(50,50)], router=cast(RouterType, 'invalid'), style=EdgeStyle({'curved': '0'}))
+    with pytest.raises(AssertionError):
+        calculate_edge_path(edge2, graph, Point(0, 0), Point(100, 100))

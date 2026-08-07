@@ -1,0 +1,27 @@
+<mxfile>
+  <diagram id="test_elbow">
+    <mxGraphModel dx="1000" dy="1000" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        
+        <mxCell id="node1" value="Node 1" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;">
+          <mxGeometry x="100" y="100" width="100" height="100" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="node2" value="Node 2" vertex="1" parent="1" style="rounded=0;whiteSpace=wrap;html=1;">
+          <mxGeometry x="400" y="300" width="100" height="100" as="geometry" />
+        </mxCell>
+
+        <mxCell id="edge1" value="Horizontal" edge="1" parent="1" source="node1" target="node2" style="edgeStyle=elbowEdgeStyle;html=1;strokeColor=#FF0000;strokeWidth=2;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        
+        <mxCell id="edge2" value="Vertical" edge="1" parent="1" source="node1" target="node2" style="edgeStyle=elbowEdgeStyle;elbow=vertical;html=1;strokeColor=#0000FF;strokeWidth=2;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

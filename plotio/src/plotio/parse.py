@@ -126,7 +126,7 @@ def _parse_vertex(cid: str, cell: ET.Element, metadata: dict[str, str], scale: f
         elif style_dict.get('rounded') == '1':
             shape = 'rounded_rectangle'
         else:
-            raise ParseError(f'Unsupported or missing shape for vertex cell {cid} with style: {style_str}')
+            shape = 'rectangle'
     else:
         shape_str = str(style_dict['shape'])
         if shape_str == 'rectangle':
@@ -217,7 +217,9 @@ def _parse_edge(
         router = 'straight'
     elif router_raw == 'orthogonaledgestyle':
         router = 'orthogonal'
-    elif router_raw in ('elbowedgestyle', 'entityrelationedgestyle', 'loopedgestyle', 'segmentedgestyle'):
+    elif router_raw == 'elbowedgestyle':
+        router = 'elbow'
+    elif router_raw in ('entityrelationedgestyle', 'loopedgestyle', 'segmentedgestyle'):
         raise ParseError(f'Unsupported edge style: {router_raw}. Please use straight or orthogonal routing.')
     else:
         raise ParseError(f'Unknown edge style: {router_raw}')

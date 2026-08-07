@@ -2,7 +2,7 @@
 
 from typing import assert_never
 
-from plotio.core import DrawIOEdge, DrawIOGraph, Point
+from plotio.core import BoundingBox, DrawIOEdge, DrawIOGraph, Point
 from plotio.curves import interpolate_path
 from plotio.geometry import resolve_node_terminal
 from plotio.styles import StyleValue
@@ -84,11 +84,76 @@ def snap_orthogonal(path: list[Point]) -> list[Point]:
     return new_path
 
 
-def calculate_edge_path(edge: DrawIOEdge, start_pt: Point, end_pt: Point) -> list[Point]:
+def pt_in_rect(pt_x: float, pt_y: float, bb: BoundingBox) -> bool:
+    """Check if a point is within a bounding box."""
+    return bb.x <= pt_x <= bb.x + bb.w and bb.y <= pt_y <= bb.y + bb.h
+
+
+def route_elbow(edge: DrawIOEdge, graph: DrawIOGraph, start_pt: Point, end_pt: Point) -> list[Point]:
+    """Generate elbow routing between two points or nodes."""
+    source_node = graph.nodes.get(edge.source_id or '')
+    target_node = graph.nodes.get(edge.target_id or '')
+
+    src_bb = source_node.bounding_box if source_node else BoundingBox(start_pt.x, start_pt.y, 0, 0)
+    tgt_bb = target_node.bounding_box if target_node else BoundingBox(end_pt.x, end_pt.y, 0, 0)
+
+    left = max(src_bb.x, tgt_bb.x)
+    right = min(src_bb.x + src_bb.w, tgt_bb.x + tgt_bb.w)
+    vertical = abs(left - right) < 1e-5
+
+    horizontal = False
+    if not vertical:
+        top = max(src_bb.y, tgt_bb.y)
+        bottom = min(src_bb.y + src_bb.h, tgt_bb.y + tgt_bb.h)
+        horizontal = abs(top - bottom) < 1e-5
+
+    is_vertical = not horizontal and (vertical or edge.style.raw_styles.get('elbow') == 'vertical')
+    waypoints: list[Point] = []
+
+    if is_vertical:
+        t = max(src_bb.y, tgt_bb.y)
+        b = min(src_bb.y + src_bb.h, tgt_bb.y + tgt_bb.h)
+        y = b + (t - b) / 2
+
+        x1 = src_bb.x + src_bb.w / 2
+        if not pt_in_rect(x1, y, tgt_bb) and not pt_in_rect(x1, y, src_bb):
+            waypoints.append(Point(x1, y))
+
+        x2 = tgt_bb.x + tgt_bb.w / 2
+        if not pt_in_rect(x2, y, tgt_bb) and not pt_in_rect(x2, y, src_bb):
+            waypoints.append(Point(x2, y))
+
+        if len(waypoints) == 1:
+            # TODO: Support custom routing centers. This fallback is needed if routingCenterX/Y
+            # places the routing center outside the node's bounds.
+            raise NotImplementedError('Custom routing centers are not yet supported for Elbow routers.')
+    else:
+        l = max(src_bb.x, tgt_bb.x)
+        r = min(src_bb.x + src_bb.w, tgt_bb.x + tgt_bb.w)
+        x = r + (l - r) / 2
+
+        y1 = src_bb.y + src_bb.h / 2
+        if not pt_in_rect(x, y1, tgt_bb) and not pt_in_rect(x, y1, src_bb):
+            waypoints.append(Point(x, y1))
+
+        y2 = tgt_bb.y + tgt_bb.h / 2
+        if not pt_in_rect(x, y2, tgt_bb) and not pt_in_rect(x, y2, src_bb):
+            waypoints.append(Point(x, y2))
+
+        if len(waypoints) == 1:
+            # TODO: Support custom routing centers. This fallback is needed if routingCenterX/Y
+            # places the routing center outside the node's bounds.
+            raise NotImplementedError('Custom routing centers are not yet supported for Elbow routers.')
+
+    return waypoints
+
+
+def calculate_edge_path(edge: DrawIOEdge, graph: DrawIOGraph, start_pt: Point, end_pt: Point) -> list[Point]:
     """Orchestrate waypoints, orthogonal routes, and curved interpolations.
 
     Args:
         edge (DrawIOEdge): The edge being routed.
+        graph (DrawIOGraph): The parent graph.
         start_pt (Point): The resolved start point.
         end_pt (Point): The resolved end point.
 
@@ -102,6 +167,8 @@ def calculate_edge_path(edge: DrawIOEdge, start_pt: Point, end_pt: Point) -> lis
         match edge.router:
             case 'orthogonal':
                 waypoints = route_orthogonal(start_pt, end_pt, edge.style.raw_styles)
+            case 'elbow':
+                waypoints = route_elbow(edge, graph, start_pt, end_pt)
             case 'straight':
                 waypoints = []
             case _:
@@ -114,7 +181,7 @@ def calculate_edge_path(edge: DrawIOEdge, start_pt: Point, end_pt: Point) -> lis
             path = interpolate_path(path)
         else:
             match edge.router:
-                case 'orthogonal':
+                case 'orthogonal' | 'elbow':
                     path = snap_orthogonal(path)
                 case 'straight':
                     pass
@@ -130,6 +197,8 @@ def _resolve_source(edge: DrawIOEdge, graph: DrawIOGraph) -> tuple[Point | None,
     if edge.target_id and edge.target_id in graph.nodes:
         target_center_hint = graph.nodes[edge.target_id].bounding_box.center
 
+    source_node = graph.nodes[edge.source_id] if edge.source_id and edge.source_id in graph.nodes else None
+
     target_fixed = edge.style.raw_styles.get('entryx') is not None
 
     next_hint: Point | None = None
@@ -143,13 +212,22 @@ def _resolve_source(edge: DrawIOEdge, graph: DrawIOGraph) -> tuple[Point | None,
     elif target_fixed and edge.target_id and edge.target_id in graph.nodes:
         next_hint = resolve_node_terminal(graph.nodes[edge.target_id], edge, is_source=False)
         start_hint_is_explicit = False
+    elif not edge.waypoints and edge.router == 'elbow':
+        # Calculate elbow waypoints using centers to get an orthogonal hint
+        dummy_start = source_node.bounding_box.center if source_node else Point(0, 0)
+        dummy_end = target_center_hint or Point(0, 0)
+        elbow_pts = route_elbow(edge, graph, dummy_start, dummy_end)
+        if elbow_pts:
+            next_hint = elbow_pts[0]
+        else:
+            next_hint = target_center_hint
+        start_hint_is_explicit = False
     else:
         next_hint = target_center_hint
         start_hint_is_explicit = False
 
     start_pt = None
-    if edge.source_id and edge.source_id in graph.nodes:
-        source_node = graph.nodes[edge.source_id]
+    if source_node:
         start_pt = resolve_node_terminal(
                 source_node, edge, is_source=True, hint_pt=next_hint, hint_is_explicit=start_hint_is_explicit
         )
@@ -167,6 +245,8 @@ def _resolve_target(
     if edge.source_id and edge.source_id in graph.nodes:
         source_center_hint = graph.nodes[edge.source_id].bounding_box.center
 
+    target_node = graph.nodes[edge.target_id] if edge.target_id and edge.target_id in graph.nodes else None
+
     source_fixed = edge.style.raw_styles.get('exitx') is not None
 
     prev_hint: Point | None = None
@@ -174,19 +254,27 @@ def _resolve_target(
     if edge.waypoints:
         prev_hint = edge.waypoints[-1]
         end_hint_is_explicit = True
-    elif start_pt:
+    elif start_pt and not (not edge.waypoints and edge.router == 'elbow'):
         prev_hint = start_pt
         if edge.fixed_source or start_hint_is_explicit or source_fixed:
             end_hint_is_explicit = True
         else:
             end_hint_is_explicit = False
+    elif not edge.waypoints and edge.router == 'elbow':
+        dummy_start = source_center_hint or Point(0, 0)
+        dummy_end = target_node.bounding_box.center if target_node else Point(0, 0)
+        elbow_pts = route_elbow(edge, graph, dummy_start, dummy_end)
+        if elbow_pts:
+            prev_hint = elbow_pts[-1]
+        else:
+            prev_hint = dummy_start
+        end_hint_is_explicit = False
     else:
         prev_hint = source_center_hint
         end_hint_is_explicit = False
 
     end_pt = None
-    if edge.target_id and edge.target_id in graph.nodes:
-        target_node = graph.nodes[edge.target_id]
+    if target_node:
         end_pt = resolve_node_terminal(
                 target_node, edge, is_source=False, hint_pt=prev_hint, hint_is_explicit=end_hint_is_explicit
         )

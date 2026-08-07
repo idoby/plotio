@@ -254,7 +254,33 @@ def test_parse_vertex_unsupported_shape() -> None:
     """
 
     root_cell = ET.fromstring(xml_str)
-    with pytest.raises(ParseError, match='Unsupported or missing shape'):
+    nodes, _ = parse_root_cell(root_cell, 1.0)
+    assert nodes['n1'].shape == 'rectangle'
+
+
+def test_parse_edge_unsupported_style() -> None:
+    xml_str = """
+    <root>
+        <mxCell id="e1" edge="1" style="edgeStyle=entityRelationEdgeStyle;">
+            <mxGeometry as="geometry" />
+        </mxCell>
+    </root>
+    """
+    root_cell = ET.fromstring(xml_str)
+    with pytest.raises(ParseError, match='Unsupported edge style'):
+        parse_root_cell(root_cell, 1.0)
+
+
+def test_parse_edge_unknown_style() -> None:
+    xml_str = """
+    <root>
+        <mxCell id="e1" edge="1" style="edgeStyle=fakeEdgeStyle;">
+            <mxGeometry as="geometry" />
+        </mxCell>
+    </root>
+    """
+    root_cell = ET.fromstring(xml_str)
+    with pytest.raises(ParseError, match='Unknown edge style'):
         parse_root_cell(root_cell, 1.0)
 
 

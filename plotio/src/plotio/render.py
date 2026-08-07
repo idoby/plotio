@@ -228,7 +228,7 @@ def edge_artists(graph: DrawIOGraph, edge: DrawIOEdge, config: RenderConfig, fon
     if not start_pt or not end_pt:
         raise RenderError(f'Cannot resolve endpoints for edge {edge.id}: {start_pt=}, {end_pt=}')
 
-    path = calculate_edge_path(edge, start_pt, end_pt)
+    path = calculate_edge_path(edge, graph, start_pt, end_pt)
 
     stroke_width = float(edge.style.raw_styles.get('strokewidth', '1.0'))
     end_size = float(edge.style.raw_styles.get('endsize', '6'))
