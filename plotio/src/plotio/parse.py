@@ -3,7 +3,7 @@
 import xml.etree.ElementTree as ET
 from typing import Literal, TypedDict
 
-from plotio.core import BoundingBox, DrawIOEdge, DrawIOEdgeLabel, DrawIONode, Point, ShapeType
+from plotio.core import BoundingBox, DrawIOEdge, DrawIOEdgeLabel, DrawIONode, Point, RouterType, ShapeType
 from plotio.errors import ParseError
 from plotio.html import clean_html_label
 from plotio.styles import EdgeStyle, LabelStyle, NodeStyle, StyleValue
@@ -146,7 +146,7 @@ def _parse_vertex(cid: str, cell: ET.Element, metadata: dict[str, str], scale: f
     geometry = BoundingBox(x * scale, y * scale, w * scale, h * scale)
 
     return DrawIONode(
-        id=cid, bounding_box=geometry, shape=shape, label=label, style=NodeStyle(style_dict), metadata=metadata
+            id=cid, bounding_box=geometry, shape=shape, label=label, style=NodeStyle(style_dict), metadata=metadata
     )
 
 
@@ -173,12 +173,12 @@ def _parse_edge_label(cid: str, cell: ET.Element, metadata: dict[str, str], scal
     label = clean_html_label(label)
 
     return DrawIOEdgeLabel(
-        id=cid, label=label, style=LabelStyle(style_dict), position=x, y_offset=y, offset=offset, metadata=metadata
+            id=cid, label=label, style=LabelStyle(style_dict), position=x, y_offset=y, offset=offset, metadata=metadata
     )
 
 
 def _parse_edge(
-    cid: str, cell: ET.Element, metadata: dict[str, str], scale: float, labels: list[DrawIOEdgeLabel] | None = None
+        cid: str, cell: ET.Element, metadata: dict[str, str], scale: float, labels: list[DrawIOEdgeLabel] | None = None
 ) -> DrawIOEdge:
     if labels is None:
         labels = []
@@ -210,14 +210,27 @@ def _parse_edge(
         pt_y = float(target_pt.get('y', 0)) * scale
         fixed_target = Point(pt_x, pt_y)
 
+    router_raw = str(style_dict.get('edgestyle', '')).lower()
+
+    router: RouterType
+    if not router_raw or router_raw == 'none':
+        router = 'straight'
+    elif router_raw == 'orthogonaledgestyle':
+        router = 'orthogonal'
+    elif router_raw in ('elbowedgestyle', 'entityrelationedgestyle', 'loopedgestyle', 'segmentedgestyle'):
+        raise ParseError(f'Unsupported edge style: {router_raw}. Please use straight or orthogonal routing.')
+    else:
+        raise ParseError(f'Unknown edge style: {router_raw}')
+
     return DrawIOEdge(
-        id=cid,
-        source_id=source_id,
-        target_id=target_id,
-        waypoints=waypoints,
-        style=EdgeStyle(style_dict),
-        metadata=metadata,
-        fixed_source=fixed_source,
-        fixed_target=fixed_target,
-        labels=labels,
+            id=cid,
+            source_id=source_id,
+            target_id=target_id,
+            waypoints=waypoints,
+            router=router,
+            style=EdgeStyle(style_dict),
+            metadata=metadata,
+            fixed_source=fixed_source,
+            fixed_target=fixed_target,
+            labels=labels,
     )

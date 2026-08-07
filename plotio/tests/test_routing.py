@@ -157,7 +157,7 @@ def test_calculate_edge_path_waypoints() -> None:
 def test_calculate_edge_path_orthogonal() -> None:
     start = Point(0, 0)
     end = Point(100, 100)
-    edge2 = DrawIOEdge('e1', '1', '2', [], style=EdgeStyle({'edgestyle': 'orthogonaledgestyle'}))
+    edge2 = DrawIOEdge('e1', '1', '2', [], router='orthogonal', style=EdgeStyle({'edgestyle': 'orthogonaledgestyle'}))
     path2 = calculate_edge_path(edge2, start, end)
     assert len(path2) == 4
 

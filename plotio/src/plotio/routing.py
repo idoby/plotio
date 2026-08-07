@@ -1,5 +1,7 @@
 """Edge routing and path generation logic."""
 
+from typing import assert_never
+
 from plotio.core import DrawIOEdge, DrawIOGraph, Point
 from plotio.curves import interpolate_path
 from plotio.geometry import resolve_node_terminal
@@ -94,22 +96,30 @@ def calculate_edge_path(edge: DrawIOEdge, start_pt: Point, end_pt: Point) -> lis
         list[Point]: The final sequence of points defining the visual path of the edge.
 
     """
-    edge_style = edge.style.raw_styles.get('edgestyle', '')
-
     if edge.waypoints:
         waypoints = edge.waypoints
-    elif edge_style == 'orthogonaledgestyle':
-        waypoints = route_orthogonal(start_pt, end_pt, edge.style.raw_styles)
     else:
-        waypoints = []
+        match edge.router:
+            case 'orthogonal':
+                waypoints = route_orthogonal(start_pt, end_pt, edge.style.raw_styles)
+            case 'straight':
+                waypoints = []
+            case _:
+                assert_never(edge.router)
 
     path = [start_pt] + waypoints + [end_pt]
 
     if len(path) >= 2:
         if edge.style.raw_styles.get('curved') == '1':
             path = interpolate_path(path)
-        elif edge_style == 'orthogonaledgestyle':
-            path = snap_orthogonal(path)
+        else:
+            match edge.router:
+                case 'orthogonal':
+                    path = snap_orthogonal(path)
+                case 'straight':
+                    pass
+                case _:
+                    assert_never(edge.router)
 
     return path
 
@@ -141,7 +151,7 @@ def _resolve_source(edge: DrawIOEdge, graph: DrawIOGraph) -> tuple[Point | None,
     if edge.source_id and edge.source_id in graph.nodes:
         source_node = graph.nodes[edge.source_id]
         start_pt = resolve_node_terminal(
-            source_node, edge, is_source=True, hint_pt=next_hint, hint_is_explicit=start_hint_is_explicit
+                source_node, edge, is_source=True, hint_pt=next_hint, hint_is_explicit=start_hint_is_explicit
         )
     if not start_pt:
         start_pt = edge.fixed_source
@@ -150,7 +160,7 @@ def _resolve_source(edge: DrawIOEdge, graph: DrawIOGraph) -> tuple[Point | None,
 
 
 def _resolve_target(
-    edge: DrawIOEdge, graph: DrawIOGraph, start_pt: Point | None, start_hint_is_explicit: bool
+        edge: DrawIOEdge, graph: DrawIOGraph, start_pt: Point | None, start_hint_is_explicit: bool
 ) -> Point | None:
     """Resolve the precise end point of an edge on its target node."""
     source_center_hint = None
@@ -178,7 +188,7 @@ def _resolve_target(
     if edge.target_id and edge.target_id in graph.nodes:
         target_node = graph.nodes[edge.target_id]
         end_pt = resolve_node_terminal(
-            target_node, edge, is_source=False, hint_pt=prev_hint, hint_is_explicit=end_hint_is_explicit
+                target_node, edge, is_source=False, hint_pt=prev_hint, hint_is_explicit=end_hint_is_explicit
         )
     if not end_pt:
         end_pt = edge.fixed_target

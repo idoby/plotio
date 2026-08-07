@@ -98,6 +98,9 @@ class DrawIOEdgeLabel:
     metadata: dict[str, str] = field(default_factory=dict)
 
 
+RouterType = Literal['orthogonal', 'straight']
+
+
 @dataclass(frozen=True)
 class DrawIOEdge:
     """An edge connecting nodes or points."""
@@ -108,6 +111,8 @@ class DrawIOEdge:
     target_id: str | None
 
     waypoints: list[Point]
+
+    router: RouterType = 'straight'
 
     fixed_source: Point | None = None
     fixed_target: Point | None = None
