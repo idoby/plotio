@@ -230,7 +230,6 @@ def edge_artists(graph: DrawIOGraph, edge: DrawIOEdge, config: RenderConfig, fon
 
     path = calculate_edge_path(edge, graph, start_pt, end_pt)
 
-    stroke_width = float(edge.style.raw_styles.get('strokewidth', '1.0'))
     end_size = float(edge.style.raw_styles.get('endsize', '6'))
     mutation_scale = end_size / 6.0 * 15
 

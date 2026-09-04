@@ -1,6 +1,6 @@
 """Tests for style coercion."""
 
-from plotio.styles import EdgeStyle, NodeStyle
+from plotio.styles import DrawioStyle, EdgeStyle, LabelStyle, NodeStyle
 
 
 def test_node_style_coercion() -> None:
@@ -41,8 +41,6 @@ def test_edge_style_value_error() -> None:
 
 
 def test_label_style_coercion() -> None:
-    from plotio.styles import LabelStyle
-
     style = LabelStyle({'fontsize': '14', 'fontcolor': 'default'})
     assert style.raw_styles['fontsize'] == 14.0
     assert style.raw_styles['color'] == 'black'
@@ -52,8 +50,6 @@ def test_label_style_coercion() -> None:
 
 
 def test_as_mpl_text_kwargs() -> None:
-    from plotio.styles import DrawioStyle
-
     style = DrawioStyle({'fontsize': 14.0, 'color': 'red', 'garbage': 'bin'})
     mpl_text = style.as_mpl_text_kwargs()
     assert mpl_text == {'fontsize': 14.0, 'color': 'red'}

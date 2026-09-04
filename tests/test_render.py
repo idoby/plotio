@@ -18,7 +18,7 @@ from plotio.render import (
     render,
     render_drawio,
 )
-from plotio.styles import EdgeStyle, LabelStyle, NodeStyle
+from plotio.styles import EdgeStyle, LabelStyle, NodeStyle, StyleValue
 
 
 def get_golden_tests() -> list[Path]:
@@ -163,8 +163,6 @@ def test_edge_artists_errors() -> None:
 
 def test_apply_style_overrides() -> None:
     metadata = {'type': 'important'}
-    from plotio.styles import StyleValue
-
     drawio: dict[str, StyleValue] = {'color': 'blue', 'width': 1.0}
     overrides: dict[str, dict[str, dict[str, StyleValue]]] = {'type': {'important': {'color': 'red', 'zorder': 5.0}}}
     defaults: dict[str, StyleValue] = {'color': 'black', 'zorder': 1.0}

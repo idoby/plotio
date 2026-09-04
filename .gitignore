@@ -1,5 +1,10 @@
+__pycache__/
+
 .idea/
-color.py
-drawio_render_utils.py
-plotio/uv.lock
-REFACTOR.md
+.venv/
+dist/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+tests/data/golden/diffs/
